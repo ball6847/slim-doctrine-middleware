@@ -120,7 +120,8 @@ class DoctrineMiddleware extends Middleware
         if (!is_array($annotationPaths)) {
             $annotationPaths = array($annotationPaths);
         }
-        $config->setMetadataDriverImpl($config->newDefaultAnnotationDriver($annotationPaths, false));
+
+        $config->setMetadataDriverImpl(Setup::createAnnotationMetadataConfiguration($annotationPaths, false));
 
         $connection = $this->getOption('connection');
 
