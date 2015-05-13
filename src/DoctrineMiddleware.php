@@ -92,7 +92,26 @@ class DoctrineMiddleware extends Middleware
     {
         $app = $this->getApplication();
 
+        $app->container->singleton(
+            'entityManager',
+            function () {
+                return static::createEntityManager();
+            }
+        );
+    }
+
+    /**
+     * Helper for creating Doctrine's EntityManager instance
+     * We need this in cli-config.php
+     *
+     * @return Doctrine\ORM\EntityManager
+     **/
+    public function createEntityManager()
+    {
+        $app = $this->getApplication();
+
         $options = $app->config('doctrine');
+
         if (is_array($options)) {
             $this->setOptions($this->options, $options);
         }
@@ -124,11 +143,8 @@ class DoctrineMiddleware extends Middleware
 
         $connection = $this->getOption('connection');
 
-        $app->container->singleton(
-            'entityManager',
-            function () use ($connection, $config) {
-                return EntityManager::create($connection, $config);
-            }
-        );
+        return EntityManager::create($connection, $config);
     }
 }
+
+
