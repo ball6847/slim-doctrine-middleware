@@ -109,10 +109,8 @@ class DoctrineMiddleware extends Middleware
             AnnotationRegistry::registerLoader($autoloader);
         }
 
-        $config = Setup::createConfiguration(!!$app->config('debug'));
-        $config->setNamingStrategy(new UnderscoreNamingStrategy(CASE_LOWER));
-
         $annotationPaths = $this->getOption('annotation_paths');
+
         if (empty($annotationPaths)) {
             throw new \BadMethodCallException('annotation_paths config should be defined');
         }
@@ -121,7 +119,8 @@ class DoctrineMiddleware extends Middleware
             $annotationPaths = array($annotationPaths);
         }
 
-        $config->setMetadataDriverImpl(Setup::createAnnotationMetadataConfiguration($annotationPaths, false));
+        $config = Setup::createAnnotationMetadataConfiguration($annotationPaths, !!$app->config('debug'));
+        $config->setNamingStrategy(new UnderscoreNamingStrategy(CASE_LOWER));
 
         $connection = $this->getOption('connection');
 
