@@ -8,7 +8,6 @@
 
 namespace Jgut\Slim\Middleware;
 
-use Slim\Middleware;
 use Doctrine\Common\Annotations\AnnotationRegistry;
 use Doctrine\ORM\Tools\Setup;
 use Doctrine\ORM\Mapping\UnderscoreNamingStrategy;
@@ -17,134 +16,59 @@ use Doctrine\ORM\EntityManager;
 /**
  * Doctrine handler middleware.
  */
-class DoctrineMiddleware extends Middleware
+class DoctrineMiddleware
 {
-    /**
-     * @var array
-     */
-    protected $options = [];
-
-     /**
-     * Check option availavility
-     *
-     * @param string $option
-     * @return bool
-     */
-    public function hasOption($option)
-    {
-        return isset($this->options[$option]);
-    }
-
-    /**
-     * Get option value or default if none existent
-     *
-     * @param string $option
-     * @param mixed $default
-     * @return mixed
-     */
-    public function getOption($option, $default = null)
-    {
-        return $this->hasOption($option) ? $this->options[$option] : $default;
-    }
-
-    /**
-     * Set option value
-     *
-     * @param string $option
-     * @param mixed $value
-     * @return $this
-     */
-    public function setOption($option, $value)
-    {
-        $this->options[$option] = $value;
-
-        return $this;
-    }
-
-    /**
-     * @param array $options
-     * @param array $defaults
-     *
-     * @return $this
-     */
-    public function setOptions(array $options, array $defaults = [])
-    {
-        $options = array_merge($defaults, $options);
-        $this->options = $options;
-
-        return $this;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    public function call()
-    {
-        $this->setup();
-
-        $this->next->call();
-    }
-
-    /**
-     * Set up Doctrine Entity Manager Slim service
-     */
-    public function setup()
-    {
-        $app = $this->getApplication();
-
-        $app->container->singleton(
-            'entityManager',
-            function () {
-                return static::createEntityManager();
-            }
-        );
-    }
-
     /**
      * Helper for creating Doctrine's EntityManager instance
      * We need this in cli-config.php
      *
      * @return Doctrine\ORM\EntityManager
      **/
-    public function createEntityManager()
+    public static function createEntityManager($container)
     {
-        $app = $this->getApplication();
+        $options = [
+            'annotation_files' => [],
+            'annotation_namespaces' => [],
+            'annotation_autoloaders' => [],
+            'debug' => false
+        ];
 
-        $options = $app->config('doctrine');
+        $options = array_merge($options, $container['config']['doctrine']);
 
-        if (is_array($options)) {
-            $this->setOptions($this->options, $options);
-        }
-
-        foreach ($this->getOption('annotation_files', []) as $file) {
-            AnnotationRegistry::registerFile($file);
-        }
-
-        foreach ($this->getOption('annotation_namespaces', []) as $namespaceMapping) {
-            AnnotationRegistry::registerAutoloadNamespace(reset($namespaceMapping), end($namespaceMapping));
-        }
-
-        foreach ($this->getOption('annotation_autoloaders', []) as $autoloader) {
-            AnnotationRegistry::registerLoader($autoloader);
-        }
-
-        $annotationPaths = $this->getOption('annotation_paths');
-
-        if (empty($annotationPaths)) {
+        // annotation_paths is required
+        if ( ! isset($options['annotation_paths'])) {
             throw new \BadMethodCallException('annotation_paths config should be defined');
         }
 
-        if (!is_array($annotationPaths)) {
+        // connection is required
+        if ( ! isset($options['connection'])) {
+            throw new \BadMethodCallException('annotation_paths config should be defined');
+        }
+
+        // ------------------------------------------------------------
+        // start doctrine setup
+
+        foreach ($options['annotation_files'] as $file) {
+            AnnotationRegistry::registerFile($file);
+        }
+
+        foreach ($options['annotation_namespaces'] as $namespaceMapping) {
+            AnnotationRegistry::registerAutoloadNamespace(reset($namespaceMapping), end($namespaceMapping));
+        }
+
+        foreach ($options['annotation_autoloaders'] as $autoloader) {
+            AnnotationRegistry::registerLoader($autoloader);
+        }
+
+        $annotationPaths = $options['annotation_paths'];
+
+        if ( ! is_array($annotationPaths)) {
             $annotationPaths = array($annotationPaths);
         }
 
-        $config = Setup::createAnnotationMetadataConfiguration($annotationPaths, !!$app->config('debug'));
+        $config = Setup::createAnnotationMetadataConfiguration($annotationPaths, !!$options['debug']);
         $config->setNamingStrategy(new UnderscoreNamingStrategy(CASE_LOWER));
 
-        $connection = $this->getOption('connection');
-
-        return EntityManager::create($connection, $config);
+        return EntityManager::create($options['connection'], $config);
     }
 }
-
-
