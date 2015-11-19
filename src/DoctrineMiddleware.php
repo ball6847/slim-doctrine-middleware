@@ -66,7 +66,7 @@ class DoctrineMiddleware
             $annotationPaths = array($annotationPaths);
         }
 
-        $config = Setup::createAnnotationMetadataConfiguration($annotationPaths, !!$options['debug']);
+        $config = Setup::createAnnotationMetadataConfiguration($annotationPaths, !$options['debug'], $options['annotation_cache_dir']);
         $config->setNamingStrategy(new UnderscoreNamingStrategy(CASE_LOWER));
 
         return EntityManager::create($options['connection'], $config);
